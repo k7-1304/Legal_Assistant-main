@@ -1,0 +1,419 @@
+{
+    "info": {
+        "name": "Legal Assistant API",
+        "description": "Comprehensive API collection for testing Legal Assistant endpoints",
+        "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+    },
+    "item": [
+        {
+            "name": "Health Check",
+            "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                    "raw": "{{base_url}}/health",
+                    "host": [
+                        "{{base_url}}"
+                    ],
+                    "path": [
+                        "health"
+                    ]
+                },
+                "description": "Check API health status"
+            }
+        },
+        {
+            "name": "Search - Murder BNS",
+            "request": {
+                "method": "POST",
+                "header": [
+                    {
+                        "key": "Content-Type",
+                        "value": "application/json"
+                    }
+                ],
+                "body": {
+                    "mode": "raw",
+                    "raw": "{\n  \"query\": \"Section 103 BNS murder\",\n  \"filters\": {\n    \"doc_type\": \"statute\",\n    \"act_name\": \"Bharatiya Nyaya Sanhita, 2023\"\n  },\n  \"top_k\": 5\n}"
+                },
+                "url": {
+                    "raw": "{{base_url}}/api/v1/search",
+                    "host": [
+                        "{{base_url}}"
+                    ],
+                    "path": [
+                        "api",
+                        "v1",
+                        "search"
+                    ]
+                },
+                "description": "Search for murder section in BNS"
+            }
+        },
+        {
+            "name": "Search - Cheque Dishonour",
+            "request": {
+                "method": "POST",
+                "header": [
+                    {
+                        "key": "Content-Type",
+                        "value": "application/json"
+                    }
+                ],
+                "body": {
+                    "mode": "raw",
+                    "raw": "{\n  \"query\": \"cheque dishonour Section 138\",\n  \"filters\": {\n    \"doc_type\": \"statute\"\n  },\n  \"top_k\": 3\n}"
+                },
+                "url": {
+                    "raw": "{{base_url}}/api/v1/search",
+                    "host": [
+                        "{{base_url}}"
+                    ],
+                    "path": [
+                        "api",
+                        "v1",
+                        "search"
+                    ]
+                },
+                "description": "Search for cheque dishonour provisions"
+            }
+        },
+        {
+            "name": "Search - Judgments Only",
+            "request": {
+                "method": "POST",
+                "header": [
+                    {
+                        "key": "Content-Type",
+                        "value": "application/json"
+                    }
+                ],
+                "body": {
+                    "mode": "raw",
+                    "raw": "{\n  \"query\": \"wife liable cheque\",\n  \"filters\": {\n    \"doc_type\": \"judgment\"\n  },\n  \"top_k\": 5\n}"
+                },
+                "url": {
+                    "raw": "{{base_url}}/api/v1/search",
+                    "host": [
+                        "{{base_url}}"
+                    ],
+                    "path": [
+                        "api",
+                        "v1",
+                        "search"
+                    ]
+                },
+                "description": "Search only in judgments"
+            }
+        },
+        {
+            "name": "Autocomplete - Section",
+            "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                    "raw": "{{base_url}}/api/v1/autocomplete?q=sec",
+                    "host": [
+                        "{{base_url}}"
+                    ],
+                    "path": [
+                        "api",
+                        "v1",
+                        "autocomplete"
+                    ],
+                    "query": [
+                        {
+                            "key": "q",
+                            "value": "sec"
+                        }
+                    ]
+                },
+                "description": "Get autocomplete suggestions for 'sec'"
+            }
+        },
+        {
+            "name": "Autocomplete - BNS",
+            "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                    "raw": "{{base_url}}/api/v1/autocomplete?q=bns",
+                    "host": [
+                        "{{base_url}}"
+                    ],
+                    "path": [
+                        "api",
+                        "v1",
+                        "autocomplete"
+                    ],
+                    "query": [
+                        {
+                            "key": "q",
+                            "value": "bns"
+                        }
+                    ]
+                },
+                "description": "Get autocomplete suggestions for 'bns'"
+            }
+        },
+        {
+            "name": "Chat - Murder Punishment",
+            "request": {
+                "method": "POST",
+                "header": [
+                    {
+                        "key": "Content-Type",
+                        "value": "application/json"
+                    }
+                ],
+                "body": {
+                    "mode": "raw",
+                    "raw": "{\n  \"session_id\": \"test-session-001\",\n  \"query\": \"What is the punishment for murder under BNS?\"\n}"
+                },
+                "url": {
+                    "raw": "{{base_url}}/api/v1/chat",
+                    "host": [
+                        "{{base_url}}"
+                    ],
+                    "path": [
+                        "api",
+                        "v1",
+                        "chat"
+                    ]
+                },
+                "description": "Ask about murder punishment in BNS"
+            }
+        },
+        {
+            "name": "Chat - Cheque Dishonour",
+            "request": {
+                "method": "POST",
+                "header": [
+                    {
+                        "key": "Content-Type",
+                        "value": "application/json"
+                    }
+                ],
+                "body": {
+                    "mode": "raw",
+                    "raw": "{\n  \"session_id\": \"test-session-002\",\n  \"query\": \"What happens if a cheque bounces due to insufficient funds?\"\n}"
+                },
+                "url": {
+                    "raw": "{{base_url}}/api/v1/chat",
+                    "host": [
+                        "{{base_url}}"
+                    ],
+                    "path": [
+                        "api",
+                        "v1",
+                        "chat"
+                    ]
+                },
+                "description": "Ask about cheque dishonour"
+            }
+        },
+        {
+            "name": "Chat - Wife Liability",
+            "request": {
+                "method": "POST",
+                "header": [
+                    {
+                        "key": "Content-Type",
+                        "value": "application/json"
+                    }
+                ],
+                "body": {
+                    "mode": "raw",
+                    "raw": "{\n  \"session_id\": \"test-session-003\",\n  \"query\": \"Can a wife be held liable under Section 141 NI Act if she didn't sign the cheque?\"\n}"
+                },
+                "url": {
+                    "raw": "{{base_url}}/api/v1/chat",
+                    "host": [
+                        "{{base_url}}"
+                    ],
+                    "path": [
+                        "api",
+                        "v1",
+                        "chat"
+                    ]
+                },
+                "description": "Ask about wife's liability in cheque cases"
+            }
+        },
+        {
+            "name": "Viability - Wife Cheque Case",
+            "request": {
+                "method": "POST",
+                "header": [
+                    {
+                        "key": "Content-Type",
+                        "value": "application/json"
+                    }
+                ],
+                "body": {
+                    "mode": "raw",
+                    "raw": "{\n  \"facts\": \"I am the wife of the business owner. I didn't sign the cheque. Can I quash the case under Section 138 NI Act?\",\n  \"filters\": {\n    \"court\": \"High Court\",\n    \"case_type\": \"Criminal\"\n  }\n}"
+                },
+                "url": {
+                    "raw": "{{base_url}}/api/v1/viability",
+                    "host": [
+                        "{{base_url}}"
+                    ],
+                    "path": [
+                        "api",
+                        "v1",
+                        "viability"
+                    ]
+                },
+                "description": "Predict viability of wife's case"
+            }
+        },
+        {
+            "name": "Viability - Settlement Case",
+            "request": {
+                "method": "POST",
+                "header": [
+                    {
+                        "key": "Content-Type",
+                        "value": "application/json"
+                    }
+                ],
+                "body": {
+                    "mode": "raw",
+                    "raw": "{\n  \"facts\": \"We settled the cheating case amicably. Can we close the FIR?\",\n  \"filters\": {\n    \"case_type\": \"Criminal\"\n  }\n}"
+                },
+                "url": {
+                    "raw": "{{base_url}}/api/v1/viability",
+                    "host": [
+                        "{{base_url}}"
+                    ],
+                    "path": [
+                        "api",
+                        "v1",
+                        "viability"
+                    ]
+                },
+                "description": "Predict viability of quashing FIR after settlement"
+            }
+        },
+        {
+            "name": "Arguments - Murder vs Culpable Homicide",
+            "request": {
+                "method": "POST",
+                "header": [
+                    {
+                        "key": "Content-Type",
+                        "value": "application/json"
+                    }
+                ],
+                "body": {
+                    "mode": "raw",
+                    "raw": "{\n  \"scenario\": \"My client hit the victim once on the head. The victim died. How to avoid Section 302 (Murder)?\"\n}"
+                },
+                "url": {
+                    "raw": "{{base_url}}/api/v1/arguments",
+                    "host": [
+                        "{{base_url}}"
+                    ],
+                    "path": [
+                        "api",
+                        "v1",
+                        "arguments"
+                    ]
+                },
+                "description": "Extract arguments for murder vs culpable homicide"
+            }
+        },
+        {
+            "name": "Arguments - Cheque Case",
+            "request": {
+                "method": "POST",
+                "header": [
+                    {
+                        "key": "Content-Type",
+                        "value": "application/json"
+                    }
+                ],
+                "body": {
+                    "mode": "raw",
+                    "raw": "{\n  \"scenario\": \"Cheque dishonour case under Section 138. What are the typical arguments?\"\n}"
+                },
+                "url": {
+                    "raw": "{{base_url}}/api/v1/arguments",
+                    "host": [
+                        "{{base_url}}"
+                    ],
+                    "path": [
+                        "api",
+                        "v1",
+                        "arguments"
+                    ]
+                },
+                "description": "Extract arguments for cheque dishonour case"
+            }
+        },
+        {
+            "name": "Clauses - Quashing FIR",
+            "request": {
+                "method": "POST",
+                "header": [
+                    {
+                        "key": "Content-Type",
+                        "value": "application/json"
+                    }
+                ],
+                "body": {
+                    "mode": "raw",
+                    "raw": "{\n  \"need\": \"Draft prayer clause for quashing FIR based on settlement\"\n}"
+                },
+                "url": {
+                    "raw": "{{base_url}}/api/v1/clauses",
+                    "host": [
+                        "{{base_url}}"
+                    ],
+                    "path": [
+                        "api",
+                        "v1",
+                        "clauses"
+                    ]
+                },
+                "description": "Find clauses for quashing FIR"
+            }
+        },
+        {
+            "name": "Clauses - Bail Application",
+            "request": {
+                "method": "POST",
+                "header": [
+                    {
+                        "key": "Content-Type",
+                        "value": "application/json"
+                    }
+                ],
+                "body": {
+                    "mode": "raw",
+                    "raw": "{\n  \"need\": \"Draft prayer clause for bail application\"\n}"
+                },
+                "url": {
+                    "raw": "{{base_url}}/api/v1/clauses",
+                    "host": [
+                        "{{base_url}}"
+                    ],
+                    "path": [
+                        "api",
+                        "v1",
+                        "clauses"
+                    ]
+                },
+                "description": "Find clauses for bail application"
+            }
+        }
+    ],
+    "variable": [
+        {
+            "key": "base_url",
+            "value": "http://localhost:8000",
+            "type": "string"
+        }
+    ]
+}

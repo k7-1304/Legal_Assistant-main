@@ -1,6 +1,6 @@
 # Legal Assistant - Implementation Plan
 
-A production-grade AI assistant for Indian Laws, featuring a "Smart Parser" for legal documents, Hybrid Search with Reranking, and a React-based UI.
+A production-grade AI assistant for **Indian Laws, Acts & Case Law (Judgments)**, featuring a Smart Parser, Hybrid Search with Reranking, Judgment Analysis (Viability Predictor, Argument Miner, Clause Search), and a React-based UI.
 
 ## Prerequisites & Dependencies
 
@@ -86,6 +86,84 @@ A production-grade AI assistant for Indian Laws, featuring a "Smart Parser" for 
 
 ---
 
+## Design Decisions (Team Review - Resolved)
+
+> [!IMPORTANT]
+> The following decisions were finalized based on team review feedback.
+
+### D1: PII & Sensitive Data Handling
+
+**Concern**: Judicial data may contain personally identifiable information (PII), juvenile cases, sexual offences, etc. that require restricted access.
+
+**Decision**: Implement dual-storage approach with access controls.
+
+| Storage | Content | Access |
+| :--- | :--- | :--- |
+| **Original Store** | Full unredacted judgment text | Admin/Privileged roles only |
+| **Vector DB** | Sanitized/anonymized chunks | All authenticated users |
+
+**Implementation Plan**:
+1. **Ingestion Pipeline**: Detect sensitive content (regex patterns for names, addresses, case numbers)
+2. **Sanitization**: Replace PII with placeholders (`[PETITIONER]`, `[VICTIM]`, `[ADDRESS]`)
+3. **Access Control**: Role-based access via MongoDB field-level security
+4. **Audit Trail**: Log all access to original sensitive documents
+
+**Enhancements**:
+- **Field-Level Encryption**: Use MongoDB Client-Side Field Level Encryption (CSFLE) for original documents
+- **Sensitive Case Categories**: Auto-detect and flag:
+  - POCSO Act cases (Protection of Children from Sexual Offences)
+  - Juvenile cases
+  - Cases marked "Identity Protected" or "In-Camera Proceedings"
+- **Auto-Exclude Rule**: POCSO/Juvenile cases → **Never store in public vector DB**
+- **IAM Integration**: Support Azure AD / Okta for enterprise SSO
+
+---
+
+### D2: Hallucination Prevention & RAG Quality Control
+
+**Concern**: Legal AI must be accurate. System should NOT answer if retrieved context is insufficient.
+
+**Decision**: Implement confidence thresholds at multiple stages.
+
+```mermaid
+flowchart TD
+    A["User Query"] --> B["Hybrid Search"]
+    B --> C["Top-K Chunks"]
+    C --> D{"Min Relevance Score >= 0.7?"}
+    D -- No --> E["REFUSE: Insufficient context"]
+    D -- Yes --> F["Reranker"]
+    F --> G{"Top chunk score >= 0.8?"}
+    G -- No --> E
+    G -- Yes --> H["Send to LLM"]
+    H --> I["Generate Answer with Citations"]
+```
+
+**Threshold Configuration** (in `.env`):
+
+| Variable | Description | Default |
+| :--- | :--- | :--- |
+| `RAG_MIN_VECTOR_SCORE` | Minimum vector similarity | `0.6` |
+| `RAG_MIN_RERANK_SCORE` | Minimum reranker score | `0.7` |
+| `RAG_MIN_CHUNKS_REQUIRED` | Minimum relevant chunks needed | `2` |
+| `RAG_REFUSE_MESSAGE` | Message when context insufficient | `"I don't have enough information..."` |
+
+**LLM Prompt Safeguard**:
+```
+IMPORTANT: Only answer based on the provided context. 
+If the context does not contain relevant information, respond with:
+"I don't have sufficient information in my knowledge base to answer this question accurately."
+Do NOT make up information.
+```
+
+**Enhancements**:
+- **Chunk Diversity Check**: Ensure retrieved chunks come from at least 2 different documents (avoid single-source bias)
+- **Knowledge Gap Logging**: Log all refused queries for analysis → identify missing content areas
+- **Confidence Disclaimer UI**: When score is between 0.7-0.85, show:
+  > *"This response is based on limited relevant context. Please verify with original sources."*
+- **Citation Verification**: Cross-check that cited sections actually exist in the database
+
+---
+
 ## Data Sources
 
 ### Primary Sources
@@ -93,8 +171,8 @@ A production-grade AI assistant for Indian Laws, featuring a "Smart Parser" for 
 | Act | Replaces | Source | Parser Mode |
 | :--- | :--- | :--- | :--- |
 | **BNS** (Act 45/2023) | IPC, 1860 | [MHA PDF](https://www.mha.gov.in/sites/default/files/250883_english_01042024.pdf) | **Narrative** (Illustrations) |
-| **BNSS** (Act 46/2023) | CrPC, 1973 | [MHA Gazette](https://egazette.gov.in/) / [India Code](https://www.indiacode.nic.in/) | **Strict** + **Schedule** |
-| **BSA** (Act 47/2023) | Evidence Act, 1872 | [MHA Gazette](https://egazette.gov.in/) / [India Code](https://www.indiacode.nic.in/) | **Narrative** |
+| **BNSS** (Act 46/2023) | CrPC, 1973 | (https://www.mha.gov.in/sites/default/files/2024-04/250884_2_english_01042024.pdf) | **Strict** + **Schedule** |
+| **BSA** (Act 47/2023) | Evidence Act, 1872 | (https://www.mha.gov.in/sites/default/files/2024-04/250882_english_01042024_0.pdf) | **Narrative** |
 
 ### Additional Sources
 
@@ -744,6 +822,46 @@ The database will store documents with this exact structure:
 }
 ```
 
+### Judgment Data Model (JSON Schema)
+
+For **Case Law/Judgments**, use this structure:
+
+```json
+{
+  "_id": "judgment_1943657_chunk_3",
+  "text_for_embedding": "Gujarat High Court > Criminal > Priti Bhojnagarwala vs State Of Gujarat... The Court held that...",
+  "raw_content": "JUDGMENT H.H. Mehta, J. 1. This is a group of 30 Criminal Misc. Applications...",
+  "embedding": [0.012, -0.234, "...", 0.987],
+  "metadata": {
+    "doc_type": "judgment",
+    "title": "Priti Bhojnagarwala vs State Of Gujarat",
+    "court_name": "Gujarat High Court",
+    "court_type": "High_Court",
+    "case_type": "Criminal",
+    "judgment_date": "2001-05-04",
+    "doc_url": "https://indiankanoon.org/doc/1943657",
+    "cites": 72,
+    "cited_by": 2,
+    "outcome": "Dismissed",
+    "acts_cited": ["IPC 138", "CrPC 482"],
+    "chunk_index": 3,
+    "total_chunks": 45,
+    "is_sensitive": false
+  }
+}
+```
+
+**Key Differences from LegalChunk**:
+
+| Field | LegalChunk (Laws) | JudgmentChunk |
+| :--- | :--- | :--- |
+| `doc_type` | `"act"` / `"section"` | `"judgment"` |
+| `section_id` | ✅ Yes | ❌ No |
+| `court_name` | ❌ No | ✅ Yes |
+| `outcome` | ❌ No | ✅ Yes (Allowed/Dismissed) |
+| `chunk_index` | ❌ No | ✅ Yes (for large docs) |
+| `is_sensitive` | ❌ No | ✅ Yes (POCSO/Juvenile flag) |
+
 #### [NEW] `app/services/database.py`
 - MongoDB initialization and connection management using `motor` (async).
 - Index management references.
@@ -898,3 +1016,79 @@ You must create **two indexes** in MongoDB Atlas UI:
 4.  **UI Verification**:
     - Test Drag-and-drop upload.
     - Test Chat interaction and clicking "Source Chips" reveals raw text.
+
+### RAG Evaluation Metrics (DeepEval)
+
+Use [DeepEval](https://github.com/confident-ai/deepeval) library to evaluate RAG pipeline quality.
+
+**Setup**:
+```bash
+pip install deepeval
+deepeval login  # For dashboard access
+```
+
+**Key Metrics to Evaluate**:
+
+| Metric | What it Measures | Target Score |
+| :--- | :--- | :---: |
+| **Faithfulness** | Is the answer grounded in retrieved context? (No hallucination) | ≥ 0.9 |
+| **Answer Relevancy** | Is the answer relevant to the question? | ≥ 0.85 |
+| **Contextual Precision** | Are relevant chunks ranked higher? | ≥ 0.8 |
+| **Contextual Recall** | Are all relevant chunks retrieved? | ≥ 0.75 |
+| **Hallucination** | Does the answer contain fabricated information? | ≤ 0.1 |
+
+**Test Dataset**: Create `tests/eval_dataset.json` with 50+ Q&A pairs:
+```json
+[
+  {
+    "input": "What is the punishment for murder under BNS?",
+    "expected_output": "Section 103 of BNS...",
+    "context": ["BNS Section 103 text..."]
+  }
+]
+```
+
+**Evaluation Script** (`scripts/run_deepeval.py`):
+```python
+from deepeval import evaluate
+from deepeval.metrics import FaithfulnessMetric, AnswerRelevancyMetric
+from deepeval.test_case import LLMTestCase
+
+# Run evaluation
+evaluate(test_cases, metrics=[
+    FaithfulnessMetric(threshold=0.9),
+    AnswerRelevancyMetric(threshold=0.85),
+])
+```
+
+**CI/CD Integration**: Run DeepEval on every PR to catch regressions.
+
+---
+
+### Feature-Specific Evaluation
+
+DeepEval applies to **all RAG features** with tailored metrics:
+
+| Feature | Primary Metrics | Special Consideration |
+| :--- | :--- | :--- |
+| **Legal Chat** | Faithfulness, Answer Relevancy, Contextual Recall | General Q&A accuracy |
+| **Viability Predictor** | Faithfulness, Contextual Precision | Compare predicted vs actual outcome |
+| **Argument Miner** | Faithfulness, Answer Relevancy | Verify arguments exist in source |
+| **Clause Search** | Contextual Precision, Contextual Recall | Exact quote match % |
+
+**Test Datasets per Feature**:
+```
+tests/
+├── eval_chat.json         # Legal Chat Q&A pairs (50+)
+├── eval_viability.json    # Case scenarios with known outcomes (30+)
+├── eval_arguments.json    # Scenarios with expected arguments (30+)
+└── eval_clauses.json      # Drafting queries with expected clauses (30+)
+```
+
+**Feature-Specific Custom Metrics**:
+
+| Feature | Custom Metric | Formula |
+| :--- | :--- | :--- |
+| **Viability** | Outcome Accuracy | `correct_predictions / total_predictions` |
+| **Argument Miner** | Argument Coverage | `found_arguments / expected_arguments` |
+| **Clause Search** | Quote Exactness | `Levenshtein similarity to source` |
